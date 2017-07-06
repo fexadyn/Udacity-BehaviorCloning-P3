@@ -29,6 +29,7 @@ def make_preprocess_layers():
     model = Sequential()
     model.add(Lambda(lambda x: x / 255. - .5,
                      input_shape=(IMAGE_HEIGHT, IMAGE_WIDTH, 3)))
+    model.add(Cropping2D(cropping=((70,25),(0,0))))
     return model
 
 def make_lenet():
