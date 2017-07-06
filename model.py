@@ -1,5 +1,6 @@
 import os
 import csv
+import utils
 
 samples = []
 
@@ -53,16 +54,19 @@ ch, row, col = 3, 160, 320  # Trimmed image format
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Cropping2D
-model = Sequential()
+#model = Sequential()
 # Preprocess incoming data, centered around zero with small standard deviation 
-model.add(Lambda(lambda x: x/127.5 - 1.,
-        input_shape=(row, col, ch),
-        output_shape=(row, col, ch)))
-model.add(Cropping2D(cropping=((70,25),(0,0))))
-model.add(Flatten())
-model.add(Dense(1))
+#model.add(Lambda(lambda x: x/127.5 - 1.,
+#        input_shape=(row, col, ch),
+#        output_shape=(row, col, ch)))
+#model.add(Cropping2D(cropping=((70,25),(0,0))))
+#model.add(Flatten())
+#model.add(Dense(1))
+
+model = utils.make_lenet()
 
 model.compile(loss='mse', optimizer='adam')
+
 model.fit_generator(train_generator, samples_per_epoch=len(train_samples), validation_data=validation_generator, nb_val_samples=len(validation_samples), nb_epoch=3)
 
 model.save('model.h5')
