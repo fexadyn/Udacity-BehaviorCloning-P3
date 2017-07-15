@@ -21,7 +21,7 @@ def main():
     image_filenames, angles = helper.removeOverrepresentedData(image_filenames, angles)
 
     if visualization_mode == 1:
-        helper.visualizeData(angles)
+        helper.visualizeDataDistribution(angles)
     
     image_filenames_train, image_filenames_test, angles_train, angles_test = train_test_split(image_filenames, angles, test_size=0.2)
     
@@ -33,7 +33,7 @@ def main():
     if visualization_mode == 1:
         while 1:
             X, y = next(train_generator)
-            helper.visualize_dataset(X, y)
+            helper.visualizeDataset(X, y)
     else:
 
         model = helper.build_nvidia_model()

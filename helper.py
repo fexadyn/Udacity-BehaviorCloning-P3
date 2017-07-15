@@ -29,7 +29,7 @@ CROP_BOTTOM = 15
 
 def readDataset(image_filenames, angles, filename, prefix):
     """
-    Reads content of .csv file into list
+    Reads content of .csv file 
     """
 
     with open(filename) as csvfile:
@@ -49,8 +49,11 @@ def readDataset(image_filenames, angles, filename, prefix):
     return image_filenames, angles
 
 def removeOverrepresentedData(filenames,angles, ):
+    """
+    Balances the distribution of driving data based on steering angles
+    """
     
-    hist,bins = np.histogram(angles,23)
+    hist,bins = np.histogram(angles,bins=23)
 
     thres = int(np.average(hist))
 
@@ -65,60 +68,48 @@ def removeOverrepresentedData(filenames,angles, ):
 
     return filenames,angles
 
-def displayCV2(img):
-    '''
-    Utility method to display a CV2 Image
-    '''
-    cv2.imshow('image',img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
-def process_img_for_visualization(img, angle, pred_angle, frame):
-    '''
-    Used by visualize_dataset method to format image prior to displaying. Converts colorspace back to original BGR, applies text to display steering angle and frame number (within batch to be visualized), and applies lines representing steering angle and model-predicted steering angle (if available) to image.
-    '''    
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    #img = cv2.cvtColor(image, cv2.COLOR_YUV2BGR)
-    img = cv2.resize(img,None,fx=3, fy=3, interpolation = cv2.INTER_CUBIC)
-    h,w = img.shape[0:2]
-    # apply text for frame number and steering angle
-    cv2.putText(img, 'frame: ' + str(frame), org=(2,18), fontFace=font, fontScale=.5, color=(200,100,100), thickness=1)
-    cv2.putText(img, 'angle: ' + str(angle), org=(2,33), fontFace=font, fontScale=.5, color=(200,100,100), thickness=1)
-    # apply a line representing the steering angle
-    cv2.line(img,(int(w/2),int(h)),(int(w/2+angle*w/4),int(h/2)),(0,255,0),thickness=4)
-    if pred_angle is not None:
-        cv2.line(img,(int(w/2),int(h)),(int(w/2+pred_angle*w/4),int(h/2)),(0,0,255),thickness=4)
-    return img
-    
-def visualize_dataset(X,y,y_pred=None):
-    '''
-    format the data from the dataset (image, steering angle) and display
-    '''
+def visualizeDataDistribution(angles):
+    """
+    Plots histogram of steering angle distribution
+    """
+
+    plt.hist(angles, bins=23)
+    plt.ylabel('# of samples')
+    plt.xlabel('Steering angle')
+    plt.show()
+
+def visualizeDataset(X,y):
+    """
+    Overlays and plots angles on given images
+    """
+
     for i in range(len(X)):
-        if y_pred is not None:
-            img = process_img_for_visualization(X[i], y[i], y_pred[i], i)
-        else: 
-            img = process_img_for_visualization(X[i], y[i], None, i)
-        displayCV2(img)  
+        img = cv2.cvtColor(X[i], cv2.COLOR_YUV2BGR) #convert preprocessed image back to RGB for visualization
+        img = cv2.resize(img,None,fx=3, fy=3, interpolation = cv2.INTER_CUBIC)
+        h,w = img.shape[0:2]
+        # apply a line representing the steering angle
+        cv2.line(img,(int(w/2),int(h)),(int(w/2+y[i]*w/4),int(h/2)),(0,255,0),thickness=4)
+        cv2.imshow('frame',img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows() 
+    return
 
 
-def preprocess_image(img, angle):
-    '''
-    Method for preprocessing images: this method is the same used in drive.py, except this version uses
-    BGR to YUV and drive.py uses RGB to YUV (due to using cv2 to read the image here, where drive.py images are 
-    received in RGB)
-    '''
-    # original shape: 160x320x3, input shape for neural net: 66x200x3
-    # crop to 105x320x3
-    #new_img = img[35:140,:,:]
-    # crop to 40x320x3
+def preprocessImage(img, angle):
+    """
+    Crops, blurs and changes color space of the image. Also, flips image horizontally with 0.5 probability
+    """
+
+    # crop image as to contain only road segment
     new_img = img[50:140,:,:]
+
     # apply subtle blur
     new_img = cv2.GaussianBlur(new_img, (3,3), 0)
+
     # scale to 66x200x3 (same as nVidia)
     new_img = cv2.resize(new_img,(200, 66), interpolation = cv2.INTER_AREA)
-    # scale to ?x?x3
-    #new_img = cv2.resize(new_img,(80, 10), interpolation = cv2.INTER_AREA)
+
     # convert to YUV color space (as nVidia paper suggests)
     new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
 
@@ -146,13 +137,13 @@ def samples_generator(image_filenames, angles, batch_size=32):
             batch_images_proc = []
             batch_angles_proc = []
             for filename, angle in zip(batch_filenames, batch_angles):
-                image_proc, angle_proc = preprocess_image(cv2.imread(filename), angle)
+                image_proc, angle_proc = preprocessImage(cv2.imread(filename), angle)
 
                 batch_images_proc.append(image_proc)
                 batch_angles_proc.append(angle_proc)
 
             X_train = np.array(batch_images_proc)
-            y_train = np.array(batch_angles_proc)*2 #more agressive steering
+            y_train = np.array(batch_angles_proc)*2 #generates more agressive steering predictions
 
             yield (X_train, y_train)
 
@@ -194,8 +185,6 @@ def build_nvidia_model():
     model.add(ELU())
     model.add(Convolution2D(48, 5, 5, subsample=(2, 2), border_mode='valid', W_regularizer=l2(0.001)))
     model.add(ELU())
-
-    #model.add(Dropout(0.50))
     
     # Add two 3x3 convolution layers (output depth 64, and 64)
     model.add(Convolution2D(64, 3, 3, border_mode='valid', W_regularizer=l2(0.001)))
@@ -209,13 +198,10 @@ def build_nvidia_model():
     # Add three fully connected layers (depth 100, 50, 10), tanh activation (and dropouts)
     model.add(Dense(100, W_regularizer=l2(0.001)))
     model.add(ELU())
-    #model.add(Dropout(0.50))
     model.add(Dense(50, W_regularizer=l2(0.001)))
     model.add(ELU())
-    #model.add(Dropout(0.50))
     model.add(Dense(10, W_regularizer=l2(0.001)))
     model.add(ELU())
-    #model.add(Dropout(0.50))
 
     # Add a fully connected output layer
     model.add(Dense(1))
