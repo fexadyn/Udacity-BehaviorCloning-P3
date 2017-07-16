@@ -9,8 +9,8 @@ Outline of the project report is as follows:
 
 ### Files
 This project contains four files
-1. ***model.py and helper.py***: All the model training related codes are given inside these two source files. Most of the functions including DNN model is in helper.py and model.py contains only the main function and function calls. In order to run just run model.py function '''python model.py''' In each call, model is trained from scratch.
-2. ***model.h5***: Trained model will be saved into this file
+1. ***model.py and helper.py***: All the model training related codes are given inside these two source files. Most of the functions including DNN model is in helper.py and model.py contains only the main function and function calls. In order to run just run model.py function '''python model.py''' In each call, model is trained from scratch and because some of the training data randomly erased, it is not guaranteed you'll get same driving performance.
+2. ***model.h5***: Trained model will be saved into this file. 
 3. ***drive.py***: Contains interface functions with the simulator. This function loads pretrained model file and image frame from simulator and predicts steering angle. Predicted angle as well as throttle value is feeded back to the simulator.
 
 ### Model architecture and training strategy
