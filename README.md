@@ -17,111 +17,14 @@ This project contains four files
 I have tested two different DNN models. First one is the simple LeNet architecture and the second one is NVidia model. I am not quite sure how LeNet performs because I have tested it at the beginning of project development without much data augmentation or overfit reducing methods applied. LeNet model was performing poorly however this may be attributed to the unstructured training data. Later, I started testing with NVidia model. It was also performing poorly however it become better and better as I worked on augmentation and cleaning methods. I will share final LeNet and NVidia achitectures that I used here:
 
 
-
-```python
-from keras.models import Sequential
-from keras.models import load_model
-from keras.layers import Cropping2D
-from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda
-from keras.layers.convolutional import Convolution2D
-from keras.layers.pooling import MaxPooling2D
-from keras.layers.advanced_activations import ELU
-from keras.layers.normalization import BatchNormalization
-from keras.regularizers import l2, activity_l2
-
-def build_preprocess_layers():
-    """
-    Build first layer of the network, normalize the pixels to [-1,1]
-    """
-    model = Sequential()
-    model.add(Lambda(lambda x: x/127.5 - 1.0,input_shape=(66,200,3)))
-                     
-    return model
-
-def build_lenet_model():
-    """
-    Build a LeNet model using keras
-    """
-    model = build_preprocess_layers()
-    model.add(Convolution2D(6, 5, 5, activation="relu"))
-    model.add(MaxPooling2D())
-    model.add(Convolution2D(6, 5, 5, activation="relu"))
-    model.add(MaxPooling2D())
-    model.add(Flatten())
-    model.add(Dense(120))
-    model.add(Dense(84))
-    model.add(Dense(1))
-
-    return model
-
-def build_nvidia_model():
-    """
-    Build a NVidia model using keras
-    """
-    model = build_preprocess_layers()
-    
-    # Add three 5x5 convolution layers (output depth 24, 36, and 48), each with 2x2 stride
-    model.add(Convolution2D(24, 5, 5, subsample=(2, 2), border_mode='valid', W_regularizer=l2(0.001)))
-    model.add(ELU())
-    model.add(Convolution2D(36, 5, 5, subsample=(2, 2), border_mode='valid', W_regularizer=l2(0.001)))
-    model.add(ELU())
-    model.add(Convolution2D(48, 5, 5, subsample=(2, 2), border_mode='valid', W_regularizer=l2(0.001)))
-    model.add(ELU())
-    
-    # Add two 3x3 convolution layers (output depth 64, and 64)
-    model.add(Convolution2D(64, 3, 3, border_mode='valid', W_regularizer=l2(0.001)))
-    model.add(ELU())
-    model.add(Convolution2D(64, 3, 3, border_mode='valid', W_regularizer=l2(0.001)))
-    model.add(ELU())
-
-    # Add a flatten layer
-    model.add(Flatten())
-
-    # Add three fully connected layers (depth 100, 50, 10), tanh activation (and dropouts)
-    model.add(Dense(100, W_regularizer=l2(0.001)))
-    model.add(ELU())
-    model.add(Dense(50, W_regularizer=l2(0.001)))
-    model.add(ELU())
-    model.add(Dense(10, W_regularizer=l2(0.001)))
-    model.add(ELU())
-
-    # Add a fully connected output layer
-    model.add(Dense(1))
-
-    return model
-
-
-from IPython.display import SVG
-from keras.utils.visualize_util import model_to_dot
-
-
-```
-
-    Using TensorFlow backend.
-
-
 #### LeNet model
 
 
-```python
-SVG(model_to_dot(build_lenet_model(),show_shapes=True).create(prog='dot', format='svg'))
-```
-
-
-
-
-![svg](output_3_0.svg)
+![svg](report_materials/output_3_0.svg)
 
 
 
 #### NVidia Model
-
-
-```python
-SVG(model_to_dot(build_nvidia_model(),show_shapes=True).create(prog='dot', format='svg'))
-```
-
-
 
 
 ![svg](report_materials/output_5_0.svg)
@@ -138,33 +41,6 @@ First, I cropped the camera image as to contain only the road segment. I cropped
 After applying preprocessing method, I visualized the data and respective steering angle in order to make sure preprocessing steps worked well and steering angle labels are accurate.
 
 I overlaid the steering angle on top of the preprocessed image.
-
-
-```python
-import utils
-import helper
-from sklearn.model_selection import train_test_split
-%matplotlib inline
-
-image_filenames = [] 
-angles = []
-
-image_filenames, angles = helper.readDataset(image_filenames, angles, './data/driving_log.csv','./data/IMG/')
-#image_filenames, angles = helper.readDataset(image_filenames, angles, './recorded/driving_log.csv','./recorded/IMG/')
-
-#image_filenames, angles = helper.removeOverrepresentedData(image_filenames, angles)
-
-image_filenames_train, image_filenames_test, angles_train, angles_test = train_test_split(image_filenames, angles, test_size=0.2)
-    
-
-# compile and train the model using the generator function
-train_generator = helper.samples_generator(image_filenames_train, angles_train, batch_size=32)
-validation_generator = helper.samples_generator(image_filenames_test, angles_test, batch_size=32)
-
-X, y = next(train_generator)
-helper.visualizeDataset(X, y)
-```
-
 
 ![png](report_materials/output_7_0.png)
 
@@ -187,11 +63,6 @@ helper.visualizeDataset(X, y)
 
 
 Next, I visualized the distribution of the steering angle in the dataset and realized that most of the data has almost zero steering angle. This makes sense because car goes straight most of the time. 
-
-
-```python
-helper.visualizeDataDistribution(angles)
-```
 
 
 ![png](report_materials/output_9_0.png)
@@ -224,12 +95,6 @@ def removeOverrepresentedData(filenames,angles, ):
 After removing overrepresented data, distribution of the remaining data is as follows:
 
 
-```python
-image_filenames, angles = helper.removeOverrepresentedData(image_filenames, angles)
-helper.visualizeDataDistribution(angles)
-```
-
-
 ![png](report_materials/output_11_0.png)
 
 
@@ -251,16 +116,6 @@ I have realized that when data is collected vehicle speed was around 15 MPH howe
 ### Driving demo
 I tested my trained model in the first track only and it worked quite well in the final version of my trained model. Of course, there are lots of items to improve but I will leave them as ToDo items to complete in the future.
 
-
-```python
-from IPython.display import YouTubeVideo
-YouTubeVideo("JMqM6vM-Z6w")
-```
-
-
-
-
-
         <iframe
             width="400"
             height="300"
@@ -268,9 +123,6 @@ YouTubeVideo("JMqM6vM-Z6w")
             frameborder="0"
             allowfullscreen
         ></iframe>
-        
-
-
 
 #### Conclusion and  ToDo items
 
