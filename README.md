@@ -116,13 +116,7 @@ I have realized that when data is collected vehicle speed was around 15 MPH howe
 ### Driving demo
 I tested my trained model in the first track only and it worked quite well in the final version of my trained model. Of course, there are lots of items to improve but I will leave them as ToDo items to complete in the future.
 
-        <iframe
-            width="400"
-            height="300"
-            src="https://www.youtube.com/embed/JMqM6vM-Z6w"
-            frameborder="0"
-            allowfullscreen
-        ></iframe>
+[***Link to video file***](https://www.youtube.com/watch?v=JMqM6vM-Z6w)
 
 #### Conclusion and  ToDo items
 
