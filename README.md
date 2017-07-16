@@ -20,14 +20,14 @@ I have tested two different DNN models. First one is the simple LeNet architectu
 #### LeNet model
 
 
-![svg](report_materials/output_3_0.svg)
+![png](report_materials/output_3_0.png)
 
 
 
 #### NVidia Model
 
 
-![svg](report_materials/output_5_0.svg)
+![png](report_materials/output_5_0.png)
 
 
 
