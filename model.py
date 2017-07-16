@@ -8,7 +8,7 @@ import helper
 from sklearn.model_selection import train_test_split
 
 
-visualization_mode = 1
+visualization_mode = 0
 
 def main():
 
