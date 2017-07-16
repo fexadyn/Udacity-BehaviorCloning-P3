@@ -1,118 +1,283 @@
-# Behaviorial Cloning Project
 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
+## Behaviour Cloning Project Report
+In this project, our purpose is to develop and train Deep Neural Network architecture to drive vehicle in a simulation environment. Labeled driving data is collected through manually driving the vehicle and recording images from various cameras as well as control inputs such as steering angle, throttle and brake status. In order to simplify the problem, we only control the steering angle and throttle amount will be fixed and controlled by simple PI controller. In order to evaluate project, rubrick given in this [link](https://review.udacity.com/#!/rubrics/432/view) is used. This project covers all the mandatory items in the rubrick. 
 
-Overview
----
-This repository contains starting files for the Behavioral Cloning Project.
+Outline of the project report is as follows:
 
-In this project, you will use what you've learned about deep neural networks and convolutional neural networks to clone driving behavior. You will train, validate and test a model using Keras. The model will output a steering angle to an autonomous vehicle.
+1. List of project files and short explanation will be given.
+2. Model architecture and training strategy will be discussed.
 
-We have provided a simulator where you can steer a car around a track for data collection. You'll use image data and steering angles to train a neural network and then use this model to drive the car autonomously around the track.
+### Files
+This project contains four files
+1. ***model.py and helper.py***: All the model training related codes are given inside these two source files. Most of the functions including DNN model is in helper.py and model.py contains only the main function and function calls. In order to run just run model.py function '''python model.py''' In each call, model is trained from scratch.
+2. ***model.h5***: Trained model will be saved into this file
+3. ***drive.py***: Contains interface functions with the simulator. This function loads pretrained model file and image frame from simulator and predicts steering angle. Predicted angle as well as throttle value is feeded back to the simulator.
 
-We also want you to create a detailed writeup of the project. Check out the [writeup template](https://github.com/udacity/CarND-Behavioral-Cloning-P3/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup. The writeup can be either a markdown file or a pdf document.
+### Model architecture and training strategy
+I have tested two different DNN models. First one is the simple LeNet architecture and the second one is NVidia model. I am not quite sure how LeNet performs because I have tested it at the beginning of project development without much data augmentation or overfit reducing methods applied. LeNet model was performing poorly however this may be attributed to the unstructured training data. Later, I started testing with NVidia model. It was also performing poorly however it become better and better as I worked on augmentation and cleaning methods. I will share final LeNet and NVidia achitectures that I used here:
 
-To meet specifications, the project will require submitting five files: 
-* model.py (script used to create and train the model)
-* drive.py (script to drive the car - feel free to modify this file)
-* model.h5 (a trained Keras model)
-* a report writeup file (either markdown or pdf)
-* video.mp4 (a video recording of your vehicle driving autonomously around the track for at least one full lap)
 
-This README file describes how to output the video in the "Details About Files In This Directory" section.
 
-Creating a Great Writeup
----
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/432/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
+```python
+from keras.models import Sequential
+from keras.models import load_model
+from keras.layers import Cropping2D
+from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda
+from keras.layers.convolutional import Convolution2D
+from keras.layers.pooling import MaxPooling2D
+from keras.layers.advanced_activations import ELU
+from keras.layers.normalization import BatchNormalization
+from keras.regularizers import l2, activity_l2
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
+def build_preprocess_layers():
+    """
+    Build first layer of the network, normalize the pixels to [-1,1]
+    """
+    model = Sequential()
+    model.add(Lambda(lambda x: x/127.5 - 1.0,input_shape=(66,200,3)))
+                     
+    return model
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
+def build_lenet_model():
+    """
+    Build a LeNet model using keras
+    """
+    model = build_preprocess_layers()
+    model.add(Convolution2D(6, 5, 5, activation="relu"))
+    model.add(MaxPooling2D())
+    model.add(Convolution2D(6, 5, 5, activation="relu"))
+    model.add(MaxPooling2D())
+    model.add(Flatten())
+    model.add(Dense(120))
+    model.add(Dense(84))
+    model.add(Dense(1))
 
-The Project
----
-The goals / steps of this project are the following:
-* Use the simulator to collect data of good driving behavior 
-* Design, train and validate a model that predicts a steering angle from image data
-* Use the model to drive the vehicle autonomously around the first track in the simulator. The vehicle should remain on the road for an entire loop around the track.
-* Summarize the results with a written report
+    return model
 
-### Dependencies
-This lab requires:
+def build_nvidia_model():
+    """
+    Build a NVidia model using keras
+    """
+    model = build_preprocess_layers()
+    
+    # Add three 5x5 convolution layers (output depth 24, 36, and 48), each with 2x2 stride
+    model.add(Convolution2D(24, 5, 5, subsample=(2, 2), border_mode='valid', W_regularizer=l2(0.001)))
+    model.add(ELU())
+    model.add(Convolution2D(36, 5, 5, subsample=(2, 2), border_mode='valid', W_regularizer=l2(0.001)))
+    model.add(ELU())
+    model.add(Convolution2D(48, 5, 5, subsample=(2, 2), border_mode='valid', W_regularizer=l2(0.001)))
+    model.add(ELU())
+    
+    # Add two 3x3 convolution layers (output depth 64, and 64)
+    model.add(Convolution2D(64, 3, 3, border_mode='valid', W_regularizer=l2(0.001)))
+    model.add(ELU())
+    model.add(Convolution2D(64, 3, 3, border_mode='valid', W_regularizer=l2(0.001)))
+    model.add(ELU())
 
-* [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
+    # Add a flatten layer
+    model.add(Flatten())
 
-The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
+    # Add three fully connected layers (depth 100, 50, 10), tanh activation (and dropouts)
+    model.add(Dense(100, W_regularizer=l2(0.001)))
+    model.add(ELU())
+    model.add(Dense(50, W_regularizer=l2(0.001)))
+    model.add(ELU())
+    model.add(Dense(10, W_regularizer=l2(0.001)))
+    model.add(ELU())
 
-The following resources can be found in this github repository:
-* drive.py
-* video.py
-* writeup_template.md
+    # Add a fully connected output layer
+    model.add(Dense(1))
 
-The simulator can be downloaded from the classroom. In the classroom, we have also provided sample data that you can optionally use to help train your model.
+    return model
 
-## Details About Files In This Directory
 
-### `drive.py`
+from IPython.display import SVG
+from keras.utils.visualize_util import model_to_dot
 
-Usage of `drive.py` requires you have saved the trained model as an h5 file, i.e. `model.h5`. See the [Keras documentation](https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model) for how to create this file using the following command:
-```sh
-model.save(filepath)
+
 ```
 
-Once the model has been saved, it can be used with drive.py using this command:
+    Using TensorFlow backend.
 
-```sh
-python drive.py model.h5
+
+#### LeNet model
+
+
+```python
+SVG(model_to_dot(build_lenet_model(),show_shapes=True).create(prog='dot', format='svg'))
 ```
 
-The above command will load the trained model and use the model to make predictions on individual images in real-time and send the predicted angle back to the server via a websocket connection.
 
-Note: There is known local system's setting issue with replacing "," with "." when using drive.py. When this happens it can make predicted steering values clipped to max/min values. If this occurs, a known fix for this is to add "export LANG=en_US.utf8" to the bashrc file.
 
-#### Saving a video of the autonomous agent
 
-```sh
-python drive.py model.h5 run1
+![svg](output_3_0.svg)
+
+
+
+#### NVidia Model
+
+
+```python
+SVG(model_to_dot(build_nvidia_model(),show_shapes=True).create(prog='dot', format='svg'))
 ```
 
-The fourth argument, `run1`, is the directory in which to save the images seen by the agent. If the directory already exists, it'll be overwritten.
 
-```sh
-ls run1
 
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_424.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_451.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_477.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_528.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_573.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_618.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_697.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_723.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_749.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_817.jpg
-...
+
+![svg](report_materials/output_5_0.svg)
+
+
+
+#### Tranining strategy
+From the lectures we learned several method to keep in mind to develop good training strategy. However, I started from simple model and minimal data augmentation to see how simple model behaves. I have noticed that without any data augmentation and with simple LeNet model, car can already navigate up to certain point in the track. First failed happened just before the bridge and next failure was just after the bridge. Then, I am convinced that simple model without any data augmentation and preprocessing would not suffice to complete the track. Because I read some guiding articles on this project, I already knew that data is very important and I started to preprocess data and augment data.
+
+##### Preprocessing the data
+First, I cropped the camera image as to contain only the road segment. I cropped 45 pixel from above and 15 pixels from below of the image. Next, I added gaussian blur and resized image to 66x200 in order to fit nvidia model. Lastly, I converted color space from BGR to YUV as suggested in the NVidia paper. Last but not least, I randomly selected half of the total images and flipped in the horizontal axis to balance number of left and right turns. 
+
+##### Visualizing the data
+After applying preprocessing method, I visualized the data and respective steering angle in order to make sure preprocessing steps worked well and steering angle labels are accurate.
+
+I overlaid the steering angle on top of the preprocessed image.
+
+
+```python
+import utils
+import helper
+from sklearn.model_selection import train_test_split
+%matplotlib inline
+
+image_filenames = [] 
+angles = []
+
+image_filenames, angles = helper.readDataset(image_filenames, angles, './data/driving_log.csv','./data/IMG/')
+#image_filenames, angles = helper.readDataset(image_filenames, angles, './recorded/driving_log.csv','./recorded/IMG/')
+
+#image_filenames, angles = helper.removeOverrepresentedData(image_filenames, angles)
+
+image_filenames_train, image_filenames_test, angles_train, angles_test = train_test_split(image_filenames, angles, test_size=0.2)
+    
+
+# compile and train the model using the generator function
+train_generator = helper.samples_generator(image_filenames_train, angles_train, batch_size=32)
+validation_generator = helper.samples_generator(image_filenames_test, angles_test, batch_size=32)
+
+X, y = next(train_generator)
+helper.visualizeDataset(X, y)
 ```
 
-The image file name is a timestamp of when the image was seen. This information is used by `video.py` to create a chronological video of the agent driving.
 
-### `video.py`
+![png](report_materials/output_7_0.png)
 
-```sh
-python video.py run1
+
+
+![png](report_materials/output_7_1.png)
+
+
+
+![png](report_materials/output_7_2.png)
+
+
+
+![png](report_materials/output_7_3.png)
+
+
+
+![png](report_materials/output_7_4.png)
+
+
+
+Next, I visualized the distribution of the steering angle in the dataset and realized that most of the data has almost zero steering angle. This makes sense because car goes straight most of the time. 
+
+
+```python
+helper.visualizeDataDistribution(angles)
 ```
 
-Creates a video based on images found in the `run1` directory. The name of the video will be the name of the directory followed by `'.mp4'`, so, in this case the video will be `run1.mp4`.
 
-Optionally, one can specify the FPS (frames per second) of the video:
+![png](report_materials/output_9_0.png)
 
-```sh
-python video.py run1 --fps 48
+
+However, this causes model to learn go straight mosltly and car cannot take sharp turns. In order to balance steering angle distribution, I removed if certain angles has more samples than specified threshold. This step is done inside removeOverrepresentedData() function:
+
+```python
+def removeOverrepresentedData(filenames,angles, ):
+    """
+    Balances the distribution of driving data based on steering angles
+    """
+    
+    hist,bins = np.histogram(angles,bins=23)
+
+    thres = int(np.average(hist))
+
+    bins_to_prune = [i for i,v in enumerate(hist) if v > thres]
+
+    for bin_idx in bins_to_prune:
+        bin_elements = [i for i,v in enumerate(angles) if (v > bins[bin_idx] and v < bins[bin_idx+1])]
+        bin_elements_to_remove = random.sample(bin_elements, len(bin_elements)-thres)
+
+        filenames = np.delete(filenames, bin_elements_to_remove)
+        angles = np.delete(angles, bin_elements_to_remove)
+
+    return filenames,angles
 ```
 
-Will run the video at 48 FPS. The default FPS is 60.
+After removing overrepresented data, distribution of the remaining data is as follows:
 
-#### Why create a video
 
-1. It's been noted the simulator might perform differently based on the hardware. So if your model drives succesfully on your machine it might not on another machine (your reviewer). Saving a video is a solid backup in case this happens.
-2. You could slightly alter the code in `drive.py` and/or `video.py` to create a video of what your model sees after the image is processed (may be helpful for debugging).
+```python
+image_filenames, angles = helper.removeOverrepresentedData(image_filenames, angles)
+helper.visualizeDataDistribution(angles)
+```
+
+
+![png](report_materials/output_11_0.png)
+
+
+##### Data augmentation
+As suggested in the project description, I used left and right camera to augment training data. I used -+25 degree bias to steering angle. Other than that I didn't used any other augmentation technique. 
+
+##### Collecting more data
+I mainly trained model using the provided data. I tried collecting my own data but realized that collecting accurate driving data is very challenging and decided to continue using provided data. However, I did collect my own training data to augment missing data especially at sharp turns. 
+
+##### Reducing overfitting
+In order to reduce overfitting, I used regularization layers in the DNN model. Also, dropout layers can be added after rectifier units. As I know their effect will not be significant, I focused on improving the data pre-processing step instead.
+
+##### Using generator functions
+As suggested in the project description, I used generator function to generate random batch samples for training. I used this generator both in random data visualization and training step.
+
+##### Additional remarks
+I have realized that when data is collected vehicle speed was around 15 MPH however I did my test in 9 MPH. Therefore training and test setups was not identical. Ideally, training and test speed should be same or we need to use speed as a training input. I tried increasing drive speed but that made control harder and caused car to crash. It is easier to control car at lower speed. I will leave training model to drive at higher speeds as one of the ToDo items for the future.
+
+### Driving demo
+I tested my trained model in the first track only and it worked quite well in the final version of my trained model. Of course, there are lots of items to improve but I will leave them as ToDo items to complete in the future.
+
+
+```python
+from IPython.display import YouTubeVideo
+YouTubeVideo("JMqM6vM-Z6w")
+```
+
+
+
+
+
+        <iframe
+            width="400"
+            height="300"
+            src="https://www.youtube.com/embed/JMqM6vM-Z6w"
+            frameborder="0"
+            allowfullscreen
+        ></iframe>
+        
+
+
+
+#### Conclusion and  ToDo items
+
+As conclusion, I really enjoyed working on this project and I would like to come back later and try several improvement items in my mind. 
+
+1. Try this model in the second challange track
+2. Try different DNN models and tweak model parameters
+3. Add more data augmentation techniques. Add random warping and random illumination change to image.
+4. Use more training data.
+5. Reduce the effects of surrounding environment. Extract the road surface or boundaries of the road and decide based on road boundaries only.

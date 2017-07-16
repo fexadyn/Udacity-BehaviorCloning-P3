@@ -85,14 +85,16 @@ def visualizeDataset(X,y):
     """
 
     for i in range(len(X)):
-        img = cv2.cvtColor(X[i], cv2.COLOR_YUV2BGR) #convert preprocessed image back to RGB for visualization
+        img = cv2.cvtColor(X[i], cv2.COLOR_YUV2RGB) #convert preprocessed image back to RGB for visualization
         img = cv2.resize(img,None,fx=3, fy=3, interpolation = cv2.INTER_CUBIC)
         h,w = img.shape[0:2]
         # apply a line representing the steering angle
         cv2.line(img,(int(w/2),int(h)),(int(w/2+y[i]*w/4),int(h/2)),(0,255,0),thickness=4)
-        cv2.imshow('frame',img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows() 
+        plt.imshow(img)
+        plt.show()
+        #cv2.imshow('frame',img)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows() 
     return
 
 
