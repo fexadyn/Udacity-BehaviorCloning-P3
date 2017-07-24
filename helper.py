@@ -115,23 +115,55 @@ def preprocessImage(img, angle):
     # convert to YUV color space (as nVidia paper suggests)
     new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
 
-    new_angle = angle
+    # new_angle = angle
 
     #flip image with 0.5 probability -- reduces bias in left and right steering data
-    if random.random() > 0.5:
-        new_img = cv2.flip(new_img,1)
-        new_angle = new_angle * -1
+    # if random.random() > 0.5:
+    #     new_img = cv2.flip(new_img,1)
+    #     new_angle = new_angle * -1
 
-    return new_img, new_angle
+    return new_img, angle
 
-def samples_generator(image_filenames, angles, batch_size=32):
+def random_distort(img, angle):
+    ''' 
+    method for adding random distortion to dataset images, including random brightness adjust, and a random
+    vertical shift of the horizon position
+    '''
+    new_img = img.astype(float)
+    # random brightness - the mask bit keeps values from going beyond (0,255)
+    value = np.random.randint(-28, 28)
+    if value > 0:
+        mask = (new_img[:,:,0] + value) > 255 
+    if value <= 0:
+        mask = (new_img[:,:,0] + value) < 0
+    new_img[:,:,0] += np.where(mask, 0, value)
+    # random shadow - full height, random left/right side, random darkening
+    h,w = new_img.shape[0:2]
+    mid = np.random.randint(0,w)
+    factor = np.random.uniform(0.6,0.8)
+    if np.random.rand() > .5:
+        new_img[:,0:mid,0] *= factor
+    else:
+        new_img[:,mid:w,0] *= factor
+    # randomly shift horizon
+    h,w,_ = new_img.shape
+    horizon = 2*h/5
+    v_shift = np.random.randint(-h/8,h/8)
+    pts1 = np.float32([[0,horizon],[w,horizon],[0,h],[w,h]])
+    pts2 = np.float32([[0,horizon+v_shift],[w,horizon+v_shift],[0,h],[w,h]])
+    M = cv2.getPerspectiveTransform(pts1,pts2)
+    new_img = cv2.warpPerspective(new_img,M,(w,h), borderMode=cv2.BORDER_REPLICATE)
+    return (new_img.astype(np.uint8), angle)
+
+def samples_generator(image_filenames, angles, batch_size=32, validation_data=False):
     """
     Continously returns a batch of samples
     """
 
+    image_filenames, angles = sklearn.utils.shuffle(image_filenames, angles)
     num_samples = len(angles)
     while 1: # Loop forever so the generator never terminates
-        image_filenames, angles = sklearn.utils.shuffle(image_filenames, angles)
+        
         for offset in range(0, num_samples, batch_size):
             batch_filenames = image_filenames[offset:offset+batch_size]
             batch_angles = angles[offset:offset+batch_size]
@@ -141,11 +173,26 @@ def samples_generator(image_filenames, angles, batch_size=32):
             for filename, angle in zip(batch_filenames, batch_angles):
                 image_proc, angle_proc = preprocessImage(cv2.imread(filename), angle)
 
+                if(validation_data == False):
+                    image_proc,angle = random_distort(image_proc, angle)
+
                 batch_images_proc.append(image_proc)
                 batch_angles_proc.append(angle_proc)
 
+                if(len(batch_images_proc) >= batch_size):
+                    break
+
+                if abs(angle_proc) > 0.33:
+                    image_proc = cv2.flip(image_proc, 1)
+                    angle_proc *= -1
+                    batch_images_proc.append(image_proc)
+                    batch_angles_proc.append(angle_proc)
+
+                    if(len(batch_images_proc) >= batch_size):
+                        break
+
             X_train = np.array(batch_images_proc)
-            y_train = np.array(batch_angles_proc)*2 #generates more agressive steering predictions
+            y_train = np.array(batch_angles_proc)
 
             yield (X_train, y_train)
 

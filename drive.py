@@ -45,7 +45,7 @@ class SimplePIController:
 
 
 controller = SimplePIController(0.1, 0.002)
-set_speed = 9
+set_speed = 15
 controller.set_desired(set_speed)
 
 def preprocess_image(img):
@@ -66,7 +66,7 @@ def preprocess_image(img):
     # scale to ?x?x3
     #new_img = cv2.resize(new_img,(80, 10), interpolation = cv2.INTER_AREA)
     # convert to YUV color space (as nVidia paper suggests)
-    new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
+    new_img = cv2.cvtColor(new_img, cv2.COLOR_RGB2YUV)
     return new_img
 
 @sio.on('telemetry')

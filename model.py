@@ -6,11 +6,15 @@ Trains DNN model to drive vehicle autonomously in simulator
 import utils
 import helper
 from sklearn.model_selection import train_test_split
-
+from keras.optimizers import Adam
+from keras.callbacks import ModelCheckpoint, Callback
+import random
 
 visualization_mode = 0
 
 def main():
+
+    random.seed(1000)
 
     image_filenames = [] 
     angles = []
@@ -23,7 +27,7 @@ def main():
     if visualization_mode == 1:
         helper.visualizeDataDistribution(angles)
     
-    image_filenames_train, image_filenames_test, angles_train, angles_test = train_test_split(image_filenames, angles, test_size=0.2)
+    image_filenames_train, image_filenames_test, angles_train, angles_test = train_test_split(image_filenames, angles, test_size=0.05, random_state=42)
     
     
     # compile and train the model using the generator function
@@ -36,10 +40,14 @@ def main():
             helper.visualizeDataset(X, y)
     else:
 
+        checkpoint = ModelCheckpoint('model{epoch:02d}.h5')
+        
         model = helper.build_nvidia_model()
-        model.compile(loss='mse', optimizer='adam')
+        model.compile(optimizer=Adam(lr=1e-4), loss='mse')
         model.fit_generator(train_generator, samples_per_epoch=len(angles_train), 
-                            validation_data=validation_generator, nb_val_samples=len(angles_test), nb_epoch=3)
+                            validation_data=validation_generator, nb_val_samples=len(angles_test), nb_epoch=5, callbacks=[checkpoint])
+
+
         model.save('model.h5')      
 
 if __name__ == "__main__":
