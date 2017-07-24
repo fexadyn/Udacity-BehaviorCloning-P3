@@ -35,7 +35,7 @@ I have tested two different DNN models. First one is the simple LeNet architectu
 From the lectures we learned several method to keep in mind to develop good training strategy. However, I started from simple model and minimal data augmentation to see how simple model behaves. I have noticed that without any data augmentation and with simple LeNet model, car can already navigate up to certain point in the track. First failed happened just before the bridge and next failure was just after the bridge. Then, I am convinced that simple model without any data augmentation and preprocessing would not suffice to complete the track. Because I read some guiding articles on this project, I already knew that data is very important and I started to preprocess data and augment data.
 
 ##### Preprocessing the data
-First, I cropped the camera image as to contain only the road segment. I cropped 45 pixel from above and 15 pixels from below of the image. Next, I added gaussian blur and resized image to 66x200 in order to fit nvidia model. Lastly, I converted color space from BGR to YUV as suggested in the NVidia paper. Last but not least, I randomly selected half of the total images and flipped in the horizontal axis to balance number of left and right turns. 
+First, I cropped the camera image as to contain only the road segment. I cropped 45 pixel from above and 15 pixels from below of the image. Next, I added gaussian blur and resized image to 66x200 in order to fit nvidia model. Then, I used YUV color space as suggested in the NVidia paper. Moreover, I added random distortion which includes random brightness adjustment and vertical shift of horizon position. Lastly, I augmented driving data by adding horizontally flipped images to my training data (I only flipped images if corresponding steering angle is greater than 0.33)
 
 ##### Visualizing the data
 After applying preprocessing method, I visualized the data and respective steering angle in order to make sure preprocessing steps worked well and steering angle labels are accurate.
@@ -116,14 +116,13 @@ I have realized that when data is collected vehicle speed was around 15 MPH howe
 ### Driving demo
 I tested my trained model in the first track only and it worked quite well in the final version of my trained model. Of course, there are lots of items to improve but I will leave them as ToDo items to complete in the future.
 
-[***Link to video file***](https://www.youtube.com/watch?v=JMqM6vM-Z6w)
+[***Link to video file***](https://youtu.be/w80d9kQiL2A)
 
 #### Conclusion and  ToDo items
 
 As conclusion, I really enjoyed working on this project and I would like to come back later and try several improvement items in my mind. 
 
-1. Try this model in the second challange track
+1. Try this model in the second challenge track
 2. Try different DNN models and tweak model parameters
-3. Add more data augmentation techniques. Add random warping and random illumination change to image.
-4. Use more training data.
-5. Reduce the effects of surrounding environment. Extract the road surface or boundaries of the road and decide based on road boundaries only.
+3. Use more training data.
+4. Reduce the effects of surrounding environment. Extract the road surface or boundaries of the road and decide based on road boundaries only.
